@@ -264,7 +264,12 @@ enum StatsFormat {
 
     /// "claude-opus-5-5" → "Opus 5.5", "claude-3-5-sonnet-20241022" → "Sonnet 3.5".
     static func model(_ id: String) -> String {
-        let parts = id.split(separator: "-").map(String.init).filter { $0 != "claude" && !($0.count == 8 && Int($0) != nil) }
+        let rawParts = id.split(separator: "-").map(String.init)
+        let parts = rawParts.filter { part -> Bool in
+            if part == "claude" { return false }
+            if part.count == 8, Int(part) != nil { return false }
+            return true
+        }
         let family = parts.first { Int($0) == nil }
         let version = parts.filter { Int($0) != nil }.joined(separator: ".")
         guard let family else { return id }
