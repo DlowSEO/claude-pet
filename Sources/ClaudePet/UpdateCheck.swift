@@ -79,8 +79,12 @@ final class UpdateChecker: NSObject, SPUUpdaterDelegate, SPUStandardUserDriverDe
         return lastCheck == nil ? .notChecked : .upToDate
     }
 
+    /// Fork builds (`ClaudePetSelfUpdates` false in Info.plist, the default of scripts/bundle.sh here):
+    /// Sparkle would replace this app with Thomas's official release, losing the fork's changes.
+    static let disabledInBuild = Bundle.main.object(forInfoDictionaryKey: "ClaudePetSelfUpdates") as? Bool == false
+
     func start() {
-        guard currentVersion != nil, controller == nil else { return }
+        guard currentVersion != nil, controller == nil, !Self.disabledInBuild else { return }
         let controller = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: self)
         self.controller = controller
         do {

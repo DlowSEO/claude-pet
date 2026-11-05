@@ -12,6 +12,8 @@ fi
 VERSION=${VERSION:-0.1.0}
 BUILD=${BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}
 BUNDLE_ID=${BUNDLE_ID:-fr.thomaslorenzini.claude-pet}
+# Fork: official updates would replace this build with Thomas's release. SELF_UPDATES=true turns them back on.
+case "$SELF_UPDATES" in true) SELF_UPDATES=true ;; *) SELF_UPDATES=false ;; esac
 FEED=https://github.com/thomaslorenzini/claude-pet/releases/latest/download/appcast.xml
 swift build -c release
 BIN=$(swift build -c release --show-bin-path)
@@ -48,6 +50,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>SUEnableAutomaticChecks</key><true/>
   <key>SUAutomaticallyUpdate</key><true/>
   <key>SUScheduledCheckInterval</key><integer>86400</integer>
+  <key>ClaudePetSelfUpdates</key><$SELF_UPDATES/>
 </dict>
 </plist>
 PLIST

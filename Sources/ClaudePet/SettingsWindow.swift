@@ -516,6 +516,8 @@ final class SettingsView: NSView {
         } ?? ""
         let current = m.updateCurrent ?? "?"
         switch m.update {
+        case .unavailable where UpdateChecker.disabledInBuild:
+            return tr("Désactivées dans cette version modifiée · v\(current)", "Off in this modified build · v\(current)")
         case .unavailable: return tr("Seulement pour l'app installée", "Only for the installed app")
         case _ where !m.updateAutomatic:
             return tr("Désactivées : rien sans « Vérifier » · v\(current)", "Off: nothing until “Check” · v\(current)") + checked
