@@ -93,9 +93,60 @@ struct Glyph {
     }
 }
 
+/// The pet's body colours, picked in Settings › Pet › Colour. Only the body and its shading change: the
+/// eyes, the laptop, the icons and the red error flash are the same in every colourway.
+enum Colourway: String, CaseIterable {
+    case classic, ocean, mint, lavender, bubblegum, slate
+
+    private static let defaultsKey = "petColourway"
+    /// Read from defaults once, so drawing a frame never touches them.
+    private static var stored = UserDefaults.standard.string(forKey: defaultsKey).flatMap(Colourway.init(rawValue:)) ?? .classic
+
+    static var current: Colourway {
+        get { stored }
+        set {
+            stored = newValue
+            UserDefaults.standard.set(newValue.rawValue, forKey: defaultsKey)
+        }
+    }
+
+    var body: UInt32 {
+        switch self {
+        case .classic: return 0xD9_77_57_FF
+        case .ocean: return 0x5B_9B_D5_FF
+        case .mint: return 0x6D_BE_8F_FF
+        case .lavender: return 0xA9_8B_D9_FF
+        case .bubblegum: return 0xE8_8A_B0_FF
+        case .slate: return 0x8C_93_9E_FF
+        }
+    }
+
+    var shade: UInt32 {
+        switch self {
+        case .classic: return 0xB5_5A_3C_FF
+        case .ocean: return 0x3F_7A_B3_FF
+        case .mint: return 0x4E_9B_6F_FF
+        case .lavender: return 0x88_69_BA_FF
+        case .bubblegum: return 0xC4_66_8D_FF
+        case .slate: return 0x6B_72_7D_FF
+        }
+    }
+
+    var name: String {
+        switch self {
+        case .classic: return tr("Classique", "Classic")
+        case .ocean: return tr("Océan", "Ocean")
+        case .mint: return tr("Menthe", "Mint")
+        case .lavender: return tr("Lavande", "Lavender")
+        case .bubblegum: return tr("Chewing-gum", "Bubblegum")
+        case .slate: return tr("Ardoise", "Slate")
+        }
+    }
+}
+
 enum Palette {
-    static let body: UInt32 = 0xD9_77_57_FF
-    static let bodyShade: UInt32 = 0xB5_5A_3C_FF
+    static var body: UInt32 { Colourway.current.body }
+    static var bodyShade: UInt32 { Colourway.current.shade }
     static let bodyError: UInt32 = 0xC8_3E_32_FF
     static let eye: UInt32 = 0x1E_1A_18_FF
     static let bubble: UInt32 = 0xFF_FF_FF_F2

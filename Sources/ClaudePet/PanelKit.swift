@@ -246,6 +246,67 @@ final class SizePicker: NSView {
     }
 }
 
+/// One swatch per colourway, the pet's body over its shading; a ring marks the one in use.
+final class ColourwayPicker: NSView {
+    var selected = Colourway.classic { didSet { needsDisplay = true } }
+    var onPick: ((Colourway) -> Void)?
+    private var hovered: Int? { didSet { needsDisplay = true } }
+    private let cell: CGFloat = 24
+
+    override var fittingSize: NSSize { NSSize(width: cell * CGFloat(Colourway.allCases.count), height: 24) }
+    override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    private func index(at event: NSEvent) -> Int? {
+        let p = convert(event.locationInWindow, from: nil)
+        guard bounds.contains(p) else { return nil }
+        return min(Colourway.allCases.count - 1, Int(p.x / cell))
+    }
+
+    override func updateTrackingAreas() {
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
+    override func mouseMoved(with event: NSEvent) {
+        hovered = index(at: event)
+        toolTip = hovered.map { Colourway.allCases[$0].name }
+    }
+    override func mouseExited(with event: NSEvent) { hovered = nil }
+    override func mouseDown(with event: NSEvent) {}
+    override func mouseUp(with event: NSEvent) {
+        guard let i = index(at: event) else { return }
+        onPick?(Colourway.allCases[i])
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let theme = PanelTheme.current(effectiveAppearance)
+        func color(_ rgba: UInt32) -> NSColor {
+            NSColor(srgbRed: CGFloat((rgba >> 24) & 0xFF) / 255, green: CGFloat((rgba >> 16) & 0xFF) / 255,
+                    blue: CGFloat((rgba >> 8) & 0xFF) / 255, alpha: 1)
+        }
+        for (i, way) in Colourway.allCases.enumerated() {
+            let side: CGFloat = 14
+            let swatch = CGRect(x: CGFloat(i) * cell + (cell - side) / 2, y: (bounds.height - side) / 2, width: side, height: side)
+            let shape = NSBezierPath(roundedRect: swatch, xRadius: 3, yRadius: 3)
+            color(way.shade).setFill()
+            shape.fill()
+            NSGraphicsContext.saveGraphicsState()
+            shape.addClip()
+            color(way.body).setFill()
+            CGRect(x: swatch.minX, y: swatch.minY, width: side, height: side - 4).fill()
+            NSGraphicsContext.restoreGraphicsState()
+            if way == selected || i == hovered {
+                let ring = NSBezierPath(roundedRect: swatch.insetBy(dx: -3, dy: -3), xRadius: 5, yRadius: 5)
+                ring.lineWidth = 1.5
+                (way == selected ? theme.text.withAlphaComponent(0.85) : theme.tertiary.withAlphaComponent(0.6)).setStroke()
+                ring.stroke()
+            }
+        }
+    }
+}
+
 /// A miniature of the screen: the pet's actual spot, and a ghost in the corner under the cursor.
 final class CornerPicker: NSView {
     var spot: CGPoint? { didSet { needsDisplay = true } }

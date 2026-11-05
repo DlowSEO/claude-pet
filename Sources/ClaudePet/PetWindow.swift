@@ -1109,6 +1109,10 @@ final class PetController: NSObject {
         NSSize(width: PixelCanvas.standardWidth * scale, height: PixelCanvas.standardHeight * scale)
     }
 
+    /// Draws the current frame again, for a change the state doesn't carry (a new colourway). Asleep,
+    /// nothing ticks, so without this the pet would keep its old colours until it wakes.
+    func redraw() { render() }
+
     private func render() {
         switch mode {
         case .floating: view.canvas = SpriteComposer.frame(state: state, tool: tool, t: t)

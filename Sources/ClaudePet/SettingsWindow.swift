@@ -187,6 +187,7 @@ final class SettingsView: NSView {
         var notchAvailable = false
         var transitioning = false
         var scale = 5
+        var colourway = Colourway.classic
         var login = LoginItem.State.off
         var loginMessage: String?
         /// Where the pet sits on its screen, 0…1 from the bottom-left corner; nil when unknown.
@@ -230,6 +231,7 @@ final class SettingsView: NSView {
     var onOpenUpdate: (() -> Void)?
     var onCheckUpdatesNow: (() -> Void)?
     var onScale: ((Int) -> Void)?
+    var onColourway: ((Colourway) -> Void)?
     var onCorner: ((PetController.Corner) -> Void)?
     var onInstall: (() -> Void)?
     var onUninstall: (() -> Void)?
@@ -238,6 +240,7 @@ final class SettingsView: NSView {
     private let visibleRow = SettingRow(accessory: PanelToggle())
     private let notchRow = SettingRow(accessory: PanelToggle())
     private let sizeRow = SettingRow(accessory: SizePicker())
+    private let colourRow = SettingRow(accessory: ColourwayPicker())
     private let positionRow = SettingRow(accessory: CornerPicker())
     private let loginRow = SettingRow(accessory: PanelToggle())
     private let usageRow = SettingRow(accessory: PanelToggle())
@@ -249,7 +252,7 @@ final class SettingsView: NSView {
     private let uninstallButton = PanelPillButton(title: "", style: .secondary)
     private let restoreOriginalButton = PanelPillButton(title: "", style: .secondary)
     private let restoreLatestButton = PanelPillButton(title: "", style: .secondary)
-    private var petRows: [SettingRow] { [visibleRow, notchRow, sizeRow, positionRow, loginRow] }
+    private var petRows: [SettingRow] { [visibleRow, notchRow, sizeRow, colourRow, positionRow, loginRow] }
     private var dataRows: [SettingRow] {
         (showsConnect ? [usageRow, connectRow] : [usageRow]) + (model.update == .unavailable ? [updateRow] : [updateRow, releaseRow])
     }
@@ -263,7 +266,8 @@ final class SettingsView: NSView {
         case .done: return model.usageHealthy != true
         }
     }
-    private let petIcon = SpriteComposer.frame(state: .idle, tool: nil, t: 0, bubble: false)
+    /// Drawn each time, so it follows the colourway.
+    private var petIcon: PixelCanvas { SpriteComposer.frame(state: .idle, tool: nil, t: 0, bubble: false) }
 
     /// Destructive actions ask twice: the first click arms them for a few seconds, one at a time.
     private enum Confirmable { case uninstall, restoreOriginal, restoreLatest }
@@ -285,6 +289,7 @@ final class SettingsView: NSView {
         releaseRow.onClick = { [weak self] in self?.releaseAction() }
         (releaseRow.accessory as! PanelPillButton).onClick = { [weak self] in self?.releaseAction() }
         (sizeRow.accessory as! SizePicker).onPick = { [weak self] in self?.onScale?($0) }
+        (colourRow.accessory as! ColourwayPicker).onPick = { [weak self] in self?.onColourway?($0) }
         (positionRow.accessory as! CornerPicker).onPick = { [weak self] in self?.onCorner?($0) }
         installButton.onClick = { [weak self] in
             self?.cancelConfirmation()
@@ -411,6 +416,11 @@ final class SettingsView: NSView {
         sizeRow.subtitle = tr("Pixels ×\(m.scale)", "Pixels ×\(m.scale)")
         sizeRow.isClickable = false
         (sizeRow.accessory as! SizePicker).scale = m.scale
+
+        colourRow.title = tr("Couleur", "Colour")
+        colourRow.subtitle = m.colourway.name
+        colourRow.isClickable = false
+        (colourRow.accessory as! ColourwayPicker).selected = m.colourway
 
         positionRow.title = tr("Position", "Position")
         positionRow.subtitle = m.notch ? tr("Fixée par l'encoche", "Set by the notch") : tr("Choisis un coin de l'écran", "Pick a corner of the screen")
@@ -621,7 +631,10 @@ final class SettingsView: NSView {
         case "bottom_left": onCorner?(.bottomLeft)
         case "top_right": onCorner?(.topRight)
         case "top_left": onCorner?(.topLeft)
-        default: if name.hasPrefix("x"), let scale = Int(name.dropFirst()) { onScale?(scale) }
+        default:
+            if name.hasPrefix("x"), let scale = Int(name.dropFirst()) { onScale?(scale) }
+            // Tests: "colour_ocean" and so on.
+            if name.hasPrefix("colour_"), let way = Colourway(rawValue: String(name.dropFirst(7))) { onColourway?(way) }
         }
     }
 

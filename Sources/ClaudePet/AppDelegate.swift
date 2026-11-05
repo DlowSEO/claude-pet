@@ -642,6 +642,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.pet.setScale($0)
             self.settings.refresh()
         }
+        view.onColourway = { [unowned self] in
+            Colourway.current = $0
+            self.pet.redraw()
+            self.settings.refresh()
+        }
         view.onCorner = { [unowned self] in
             self.pet.move(to: $0)
             self.settings.refresh()
@@ -690,6 +695,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         m.notchAvailable = pet.notchAvailable
         m.transitioning = pet.isTransitioning
         m.scale = pet.scale
+        m.colourway = Colourway.current
         if pet.mode == .floating, let screen = pet.panel.screen ?? NSScreen.main {
             let area = screen.visibleFrame, frame = pet.panel.frame
             let free = CGSize(width: max(1, area.width - frame.width), height: max(1, area.height - frame.height))
