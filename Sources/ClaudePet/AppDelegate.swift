@@ -301,6 +301,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Tests: checks GitHub now, or pretends it answered this version ("" forgets it).
             if control["check_updates"] as? Bool == true { self.updates.checkInBackground() }
             if control["install_update"] as? Bool == true { self.updates.install() }
+            // Tests: "Reset the pet", as the menu or the panel would.
+            if control["reset"] as? Bool == true { self.resetPet() }
             // Tests: open or close the request panel as a hover would.
             if let reveal = control["reveal"] as? Bool { self.pet.revealRequest(reveal) }
             // Tests: renders the pet's windows to PNG, even with the display asleep.
@@ -484,6 +486,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refresh()
     }
 
+    /// "Reset the pet", for when it is stuck in a state Claude has left. Any request it holds goes back
+    /// to Claude's own dialog (no decision is sent), every session is forgotten, and the pet waves so the
+    /// click shows. Claude's real state comes back with its next hook.
+    private func resetPet() {
+        for request in requests.queue { requests.dismiss(request.id) }
+        tracker.reset()
+        wakeUp()
+    }
+
     // MARK: Menu bar panel
 
     @objc private func statusItemClicked() {
@@ -501,6 +512,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.view.onToggleVisible = { [unowned self] in self.toggleVisible() }
         panel.view.onToggleNotch = { [unowned self] in self.toggleNotch() }
         panel.view.onStats = { [unowned self] in self.openStats() }
+        panel.view.onReset = { [unowned self] in self.resetPet() }
         panel.view.onUpdate = { [unowned self] in
             self.panel.close()
             self.updates.install()
@@ -740,6 +752,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(disabled: quotaStatus)
         menu.addItem(.separator())
 
+        menu.addItem(action: tr("Réinitialiser le pet", "Reset the pet"), key: "r") { [unowned self] in self.resetPet() }
         menu.addItem(action: pet.isVisible ? tr("Masquer", "Hide") : tr("Afficher", "Show"), key: "h") { [unowned self] in
             self.pet.isVisible ? self.pet.hide() : self.pet.show()
         }

@@ -135,6 +135,13 @@ final class SessionTracker {
         lastActivity = now
     }
 
+    /// "Reset the pet": forgets every session, for when the pet shows a state Claude has left (a missed
+    /// hook, an interrupt). Hooks carry no "current state", so the real one comes back with the next event.
+    func reset(now: Date = Date()) {
+        sessions.removeAll()
+        lastActivity = now
+    }
+
     func handle(_ event: [String: Any], now: Date = Date()) {
         let name = event["hook_event_name"] as? String ?? ""
         let id = event["session_id"] as? String ?? "default"

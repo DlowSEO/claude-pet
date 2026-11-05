@@ -200,11 +200,13 @@ final class ControlPanelView: NSView {
     var onToggleNotch: (() -> Void)?
     var onUpdate: (() -> Void)?
     var onStats: (() -> Void)?
+    var onReset: (() -> Void)?
 
     let stage = PetStage()
     private let visibleRow = SettingRow(accessory: PanelToggle())
     private let notchRow = SettingRow(accessory: PanelToggle())
     private let statsRow = SettingRow(accessory: ChevronAccessory())
+    private let resetRow = SettingRow(accessory: ResetAccessory())
     private let settingsButton = FooterButton(title: tr("Réglages…", "Settings…"), shortcut: "⌘,")
     private let quitButton = FooterButton(title: tr("Quitter", "Quit"), shortcut: "⌘Q")
     private let updateButton: FooterButton = {
@@ -220,7 +222,8 @@ final class ControlPanelView: NSView {
     private static let ringsY: CGFloat = usageTitleY + 24
     private static let ringSize: CGFloat = 50
     private static let rowHeight: CGFloat = 48
-    private static let cardRect = CGRect(x: pad, y: ringsY + ringSize + 50, width: width - 2 * pad, height: 3 * rowHeight)
+    private static let cardRows = 4
+    private static let cardRect = CGRect(x: pad, y: ringsY + ringSize + 50, width: width - 2 * pad, height: CGFloat(cardRows) * rowHeight)
     private static let updateY: CGFloat = cardRect.maxY + 8
     private var separatorY: CGFloat { Self.cardRect.maxY + (model.update == nil ? 12 : 8 + 24 + 8) }
     private var footerY: CGFloat { separatorY + 8 }
@@ -232,6 +235,7 @@ final class ControlPanelView: NSView {
         addSubview(visibleRow)
         addSubview(notchRow)
         addSubview(statsRow)
+        addSubview(resetRow)
         addSubview(settingsButton)
         addSubview(quitButton)
         addSubview(updateButton)
@@ -240,6 +244,7 @@ final class ControlPanelView: NSView {
         visibleRow.onClick = { [weak self] in self?.onToggleVisible?() }
         notchRow.onClick = { [weak self] in self?.onToggleNotch?() }
         statsRow.onClick = { [weak self] in self?.onStats?() }
+        resetRow.onClick = { [weak self] in self?.onReset?() }
         quitButton.onClick = { [weak self] in self?.onQuit?() }
         updateButton.onClick = { [weak self] in self?.onUpdate?() }
         apply()
@@ -263,6 +268,8 @@ final class ControlPanelView: NSView {
         (notchRow.accessory as! PanelToggle).isOn = model.notch
         statsRow.title = tr("Statistiques", "Statistics")
         statsRow.subtitle = model.statsToday.map { tr("Aujourd'hui : ", "Today: ") + $0 } ?? tr("Tokens, modèles et activité", "Tokens, models and activity")
+        resetRow.title = tr("Réinitialiser le pet", "Reset the pet")
+        resetRow.subtitle = tr("S'il reste bloqué sur un vieil état", "For when it's stuck on an old state")
         updateButton.isHidden = model.update == nil
         updateButton.title = model.update ?? ""
         needsLayout = true
@@ -275,6 +282,7 @@ final class ControlPanelView: NSView {
         visibleRow.frame = CGRect(x: Self.cardRect.minX, y: Self.cardRect.minY, width: Self.cardRect.width, height: Self.rowHeight)
         notchRow.frame = visibleRow.frame.offsetBy(dx: 0, dy: Self.rowHeight)
         statsRow.frame = notchRow.frame.offsetBy(dx: 0, dy: Self.rowHeight)
+        resetRow.frame = statsRow.frame.offsetBy(dx: 0, dy: Self.rowHeight)
         // The footer buttons hang off the right edge, their hover plate aligned with the cards' edge.
         let quit = quitButton.fittingSize, settings = settingsButton.fittingSize
         quitButton.frame = CGRect(x: bounds.width - Self.pad - quit.width + 6, y: footerY, width: quit.width, height: quit.height)
@@ -319,7 +327,7 @@ final class ControlPanelView: NSView {
         theme.card.setFill()
         NSBezierPath(roundedRect: Self.cardRect, xRadius: 11, yRadius: 11).fill()
         theme.stroke.setFill()
-        for row in 1...2 {
+        for row in 1..<Self.cardRows {
             CGRect(x: Self.cardRect.minX + 12, y: Self.cardRect.minY + CGFloat(row) * Self.rowHeight - 0.5,
                    width: Self.cardRect.width - 24, height: 1).fill()
         }
@@ -389,6 +397,7 @@ final class ControlPanelView: NSView {
         case "visible": onToggleVisible?()
         case "notch": onToggleNotch?()
         case "stats": onStats?()
+        case "reset": onReset?()
         case "update": if model.update != nil { onUpdate?() }
         default: break
         }
@@ -417,6 +426,28 @@ final class ChevronAccessory: NSView {
         chevron.lineJoinStyle = .round
         theme.tertiary.setStroke()
         chevron.stroke()
+    }
+}
+
+/// "Reset the pet"'s sign: a counter-clockwise arrow, in the chevron's color.
+final class ResetAccessory: NSView {
+    override var fittingSize: NSSize { NSSize(width: 16, height: 16) }
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let symbol = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 12, weight: .semibold)) else { return }
+        let color = PanelTheme.current(effectiveAppearance).tertiary
+        let tinted = NSImage(size: symbol.size, flipped: false) { rect in
+            symbol.draw(in: rect)
+            color.set()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
+        let size = tinted.size
+        tinted.draw(in: CGRect(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2,
+                               width: size.width, height: size.height))
     }
 }
 
